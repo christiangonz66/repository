@@ -1,19 +1,38 @@
 # Colorado Job Tracker
 
-A streamlined Streamlit app for visualizing job distribution across Colorado cities and counties.
+A Streamlit application for visualizing job distribution across Colorado cities and counties.
 
 ## Features
+
 - Upload CSV files with job location data
-- Fuzzy matching to Colorado cities
-- Interactive maps (city points or county boundaries)
-- Data export functionality
+- Match locations to Colorado cities using fuzzy matching
+- Visualize job distribution by city or county
+- Export matched and unmatched data
+- Interactive maps and data tables
+
+## Installation
+
+\`\`\`bash
+pip install -r requirements.txt
+\`\`\`
 
 ## Usage
-1. Upload a CSV file with a 'location' column
-2. Choose visualization type and settings
-3. Explore the interactive map and data tables
+
+\`\`\`bash
+streamlit run app.py
+\`\`\`
 
 ## Deployment
-- Streamlit Cloud: Connect to GitHub repo
-- Heroku: Uses Procfile for deployment
-- Local: `streamlit run app.py`
+
+This app can be deployed to:
+- Streamlit Cloud
+- Heroku
+- Railway
+- Any platform supporting Python web applications
+
+## Data Format
+
+Your CSV should contain a column with location information such as:
+- City names (e.g., "Denver", "Colorado Springs")
+- City, State format (e.g., "Boulder, CO")
+- Full addresses containing Colorado cities

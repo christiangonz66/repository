@@ -1,10 +1,8 @@
 import streamlit as st
 import pandas as pd
 import plotly.express as px
-import plotly.graph_objects as go
 from fuzzywuzzy import fuzz, process
 import re
-import json
 
 # Page config
 st.set_page_config(
@@ -30,18 +28,21 @@ CITY_TO_COUNTY = {
     'breckenridge': 'Summit', 'crested butte': 'Gunnison'
 }
 
+# Default Colorado cities data
+DEFAULT_CITIES = pd.DataFrame({
+    'City': ['Denver', 'Colorado Springs', 'Aurora', 'Fort Collins', 'Lakewood', 'Boulder'],
+    'Latitude': [39.74, 38.83, 39.73, 40.59, 39.71, 40.02],
+    'Longitude': [-104.99, -104.82, -104.83, -105.08, -105.08, -105.27]
+})
+
 @st.cache_data
 def load_cities():
     """Load Colorado cities data with fallback"""
     try:
         return pd.read_csv('data/colorado_cities_over_50000.csv')
     except FileNotFoundError:
-        # Fallback: create minimal cities data
-        return pd.DataFrame({
-            'City': ['Denver', 'Colorado Springs', 'Aurora', 'Fort Collins', 'Lakewood', 'Boulder'],
-            'Latitude': [39.74, 38.83, 39.73, 40.59, 39.71, 40.02],
-            'Longitude': [-104.99, -104.82, -104.83, -105.08, -105.08, -105.27]
-        })
+        # Fallback: use default cities data
+        return DEFAULT_CITIES
 
 def clean_location(location):
     """Clean and normalize location string"""
@@ -75,13 +76,17 @@ def match_location(location, cities, threshold=80):
 
 def process_job_data(df, cities, threshold=80):
     """Process job data and match locations"""
-    if 'location' not in df.columns:
-        st.error("CSV must contain a 'location' column")
+    # Find location column
+    location_columns = [col for col in df.columns if 'location' in col.lower()]
+    if not location_columns:
+        st.error("CSV must contain a column with 'location' in the name")
         return None
+    
+    location_col = location_columns[0]
     
     results = []
     for _, row in df.iterrows():
-        matched_city, confidence = match_location(row['location'], cities, threshold)
+        matched_city, confidence = match_location(row[location_col], cities, threshold)
         
         result = row.to_dict()
         result['matched_city'] = matched_city
@@ -254,6 +259,26 @@ def main():
                 'company': ['Tech Corp', 'Data Inc', 'Biz LLC']
             })
             st.dataframe(sample)
+        
+        # Show deployment instructions
+        with st.expander("🚀 Deployment Instructions"):
+            st.markdown("""
+            ### How to Deploy This App
+            
+            #### Option 1: Streamlit Cloud (Recommended)
+            1. Push this code to GitHub
+            2. Go to [share.streamlit.io](https://share.streamlit.io)
+            3. Connect your GitHub repository
+            4. Set main file path to `app.py`
+            5. Click Deploy!
+            
+            #### Option 2: Heroku
+            1. Make sure you have the `Procfile` with: `web: streamlit run app.py --server.port=$PORT`
+            2. Push to Heroku with: `heroku create` and `git push heroku main`
+            
+            #### Option 3: Local Development
+            Run: `streamlit run app.py`
+            """)
 
 if __name__ == "__main__":
     main()
