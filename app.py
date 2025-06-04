@@ -32,8 +32,16 @@ CITY_TO_COUNTY = {
 
 @st.cache_data
 def load_cities():
-    """Load Colorado cities data"""
-    return pd.read_csv('data/colorado_cities_over_50000.csv')
+    """Load Colorado cities data with fallback"""
+    try:
+        return pd.read_csv('data/colorado_cities_over_50000.csv')
+    except FileNotFoundError:
+        # Fallback: create minimal cities data
+        return pd.DataFrame({
+            'City': ['Denver', 'Colorado Springs', 'Aurora', 'Fort Collins', 'Lakewood', 'Boulder'],
+            'Latitude': [39.74, 38.83, 39.73, 40.59, 39.71, 40.02],
+            'Longitude': [-104.99, -104.82, -104.83, -105.08, -105.08, -105.27]
+        })
 
 def clean_location(location):
     """Clean and normalize location string"""
@@ -158,14 +166,46 @@ def create_county_map(data, color_scheme='Viridis'):
     
     return fig
 
-def main():
-    st.title("🗺️ Colorado Job Tracker")
-    st.markdown("Upload a CSV file with job location data to visualize distribution across Colorado")
+def display_metrics(processed_data):
+    """Display summary metrics in columns"""
+    total = len(processed_data)
+    matched = len(processed_data[processed_data['matched_city'].notna()])
     
-    # Load cities data
-    cities = load_cities()
+    col1, col2, col3 = st.columns(3)
+    with col1:
+        st.metric("Total Jobs", f"{total:,}")
+    with col2:
+        st.metric("Matched", f"{matched:,}")
+    with col3:
+        st.metric("Match Rate", f"{matched/total*100:.1f}%" if total > 0 else "0%")
     
-    # Sidebar
+    return matched
+
+def display_data_tables(processed_data):
+    """Display matched and unmatched data tables"""
+    col1, col2 = st.columns(2)
+    
+    with col1:
+        st.subheader("✅ Matched Locations")
+        matched_data = processed_data[processed_data['matched_city'].notna()]
+        if len(matched_data) > 0:
+            location_counts = matched_data.groupby('matched_city').size().reset_index(name='count')
+            location_counts = location_counts.sort_values('count', ascending=False)
+            st.dataframe(location_counts)
+            
+            csv = matched_data.to_csv(index=False)
+            st.download_button("📥 Download Matched Data", csv, "matched_jobs.csv", "text/csv")
+    
+    with col2:
+        st.subheader("❌ Unmatched Locations")
+        unmatched = processed_data[processed_data['matched_city'].isna()]
+        if len(unmatched) > 0:
+            unmatched_counts = unmatched.groupby('location').size().reset_index(name='count')
+            unmatched_counts = unmatched_counts.sort_values('count', ascending=False)
+            st.dataframe(unmatched_counts)
+
+def render_sidebar():
+    """Render sidebar controls and return settings"""
     with st.sidebar:
         st.header("📁 Upload Data")
         uploaded_file = st.file_uploader("Choose CSV file", type=['csv'])
@@ -175,62 +215,38 @@ def main():
         threshold = st.slider("Matching Threshold", 60, 100, 80)
         color_scheme = st.selectbox("Color Scheme", ["Viridis", "Plasma", "Blues", "Reds"])
     
-    if uploaded_file:
-        # Process data
-        with st.spinner("Processing data..."):
-            df = pd.read_csv(uploaded_file)
-            processed_data = process_job_data(df, cities, threshold)
-        
-        if processed_data is not None:
-            # Stats
-            total = len(processed_data)
-            matched = len(processed_data[processed_data['matched_city'].notna()])
-            
-            col1, col2, col3 = st.columns(3)
-            with col1:
-                st.metric("Total Jobs", f"{total:,}")
-            with col2:
-                st.metric("Matched", f"{matched:,}")
-            with col3:
-                st.metric("Match Rate", f"{matched/total*100:.1f}%")
-            
-            # Map
-            if matched > 0:
-                if view_type == "City Points":
-                    fig = create_city_map(processed_data, color_scheme)
-                else:
-                    fig = create_county_map(processed_data, color_scheme)
-                
-                if fig:
-                    st.plotly_chart(fig, use_container_width=True)
-            
-            # Data tables
-            col1, col2 = st.columns(2)
-            
-            with col1:
-                st.subheader("✅ Matched Locations")
-                if matched > 0:
-                    matched_data = processed_data[processed_data['matched_city'].notna()]
-                    location_counts = matched_data.groupby('matched_city').size().reset_index(name='count')
-                    location_counts = location_counts.sort_values('count', ascending=False)
-                    st.dataframe(location_counts)
-                    
-                    # Download
-                    csv = matched_data.to_csv(index=False)
-                    st.download_button("📥 Download Matched Data", csv, "matched_jobs.csv", "text/csv")
-            
-            with col2:
-                st.subheader("❌ Unmatched Locations")
-                unmatched = processed_data[processed_data['matched_city'].isna()]
-                if len(unmatched) > 0:
-                    unmatched_counts = unmatched.groupby('location').size().reset_index(name='count')
-                    unmatched_counts = unmatched_counts.sort_values('count', ascending=False)
-                    st.dataframe(unmatched_counts)
+    return uploaded_file, view_type, threshold, color_scheme
+
+def main():
+    st.title("🗺️ Colorado Job Tracker")
+    st.markdown("Upload a CSV file with job location data to visualize distribution across Colorado")
     
+    cities = load_cities()
+    uploaded_file, view_type, threshold, color_scheme = render_sidebar()
+    
+    if uploaded_file:
+        try:
+            with st.spinner("Processing data..."):
+                df = pd.read_csv(uploaded_file)
+                processed_data = process_job_data(df, cities, threshold)
+            
+            if processed_data is not None:
+                matched_count = display_metrics(processed_data)
+                
+                # Render map only if we have matches
+                if matched_count > 0:
+                    map_func = create_city_map if view_type == "City Points" else create_county_map
+                    fig = map_func(processed_data, color_scheme)
+                    if fig:
+                        st.plotly_chart(fig, use_container_width=True)
+                
+                display_data_tables(processed_data)
+        except Exception as e:
+            st.error(f"Error processing data: {str(e)}")
+            st.info("Please check your CSV format and try again.")
     else:
+        # Show welcome message and sample format
         st.info("👆 Upload a CSV file to get started")
-        
-        # Sample format
         with st.expander("📋 Expected CSV Format"):
             sample = pd.DataFrame({
                 'location': ['Denver, CO', 'Boulder', 'Colorado Springs'],
