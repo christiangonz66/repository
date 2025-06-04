@@ -1,30 +1,19 @@
-# ColoradoJobTracker
+# Colorado Job Tracker
 
-*Automatically synced with your [v0.dev](https://v0.dev) deployments*
+A streamlined Streamlit app for visualizing job distribution across Colorado cities and counties.
 
-[![Deployed on Vercel](https://img.shields.io/badge/Deployed%20on-Vercel-black?style=for-the-badge&logo=vercel)](https://vercel.com/christian-5530s-projects/v0-colorado-job-tracker)
-[![Built with v0](https://img.shields.io/badge/Built%20with-v0.dev-black?style=for-the-badge)](https://v0.dev/chat/projects/3oQQLLit8iJ)
+## Features
+- Upload CSV files with job location data
+- Fuzzy matching to Colorado cities
+- Interactive maps (city points or county boundaries)
+- Data export functionality
 
-## Overview
-
-This repository will stay in sync with your deployed chats on [v0.dev](https://v0.dev).
-Any changes you make to your deployed app will be automatically pushed to this repository from [v0.dev](https://v0.dev).
+## Usage
+1. Upload a CSV file with a 'location' column
+2. Choose visualization type and settings
+3. Explore the interactive map and data tables
 
 ## Deployment
-
-Your project is live at:
-
-**[https://vercel.com/christian-5530s-projects/v0-colorado-job-tracker](https://vercel.com/christian-5530s-projects/v0-colorado-job-tracker)**
-
-## Build your app
-
-Continue building your app on:
-
-**[https://v0.dev/chat/projects/3oQQLLit8iJ](https://v0.dev/chat/projects/3oQQLLit8iJ)**
-
-## How It Works
-
-1. Create and modify your project using [v0.dev](https://v0.dev)
-2. Deploy your chats from the v0 interface
-3. Changes are automatically pushed to this repository
-4. Vercel deploys the latest version from this repository
+- Streamlit Cloud: Connect to GitHub repo
+- Heroku: Uses Procfile for deployment
+- Local: `streamlit run app.py`
